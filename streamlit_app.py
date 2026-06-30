@@ -185,7 +185,6 @@ section[data-testid="stSidebar"] [data-testid="stWidgetLabel"] p {
     color: #fff;
     text-align: center;
 }
-
 </style>
 """, unsafe_allow_html=True)
 
@@ -401,7 +400,8 @@ if page == "Overview Dataset":
         
     st.markdown('<p class="section-header">Preview <span>Dataset Mentah (Original)</span></p>', unsafe_allow_html=True)
     try:
-        df_raw = get_excel_sheet(r'C:\Users\NITRO\Downloads\data_paa\test_akhir\cek2\data_base2.xlsx')
+        # PERBAIKAN: Mengubah path absolut menjadi path relatif berbasis root folder GitHub Anda
+        df_raw = get_excel_sheet(os.path.join(BASE, 'data_base2.xlsx'))
         st.dataframe(clean_display_table(df_raw), use_container_width=True)
     except Exception as e:
         st.warning(f"Gagal membaca Excel data mentah. Menampilkan data preprocessed: {e}")
@@ -449,8 +449,9 @@ elif page == "EDA":
     
     # Summary stats
     st.markdown("### Statistik Deskriptif Variabel Akademik & Utama")
-    if os.path.exists('output/eda_summary_stats.csv'):
-        df_stats = pd.read_csv('output/eda_summary_stats.csv', index_col=0)
+    eda_stats_path = os.path.join(BASE, 'output/eda_summary_stats.csv')
+    if os.path.exists(eda_stats_path):
+        df_stats = pd.read_csv(eda_stats_path, index_col=0)
         st.dataframe(df_stats.round(3), use_container_width=True)
     else:
         st.dataframe(df_labeled.describe().T, use_container_width=True)
@@ -464,26 +465,30 @@ elif page == "EDA":
     ])
     
     with tab1:
-        if os.path.exists('output/eda_distributions.png'):
-            st.image('output/eda_distributions.png', caption="Distribusi Nilai Setelah Normalisasi", use_container_width=True)
+        img_path = os.path.join(BASE, 'output/eda_distributions.png')
+        if os.path.exists(img_path):
+            st.image(img_path, caption="Distribusi Nilai Setelah Normalisasi", use_container_width=True)
         else:
             st.warning("Grafik distribusi belum dibuat.")
             
     with tab2:
-        if os.path.exists('output/eda_outliers.png'):
-            st.image('output/eda_outliers.png', caption="Deteksi Outlier", use_container_width=True)
+        img_path = os.path.join(BASE, 'output/eda_outliers.png')
+        if os.path.exists(img_path):
+            st.image(img_path, caption="Deteksi Outlier", use_container_width=True)
         else:
             st.warning("Grafik boxplot belum dibuat.")
             
     with tab3:
-        if os.path.exists('output/eda_correlation.png'):
-            st.image('output/eda_correlation.png', caption="Heatmap Korelasi Pearson", use_container_width=True)
+        img_path = os.path.join(BASE, 'output/eda_correlation.png')
+        if os.path.exists(img_path):
+            st.image(img_path, caption="Heatmap Korelasi Pearson", use_container_width=True)
         else:
             st.warning("Heatmap korelasi belum dibuat.")
             
     with tab4:
-        if os.path.exists('output/eda_missing_values.png'):
-            st.image('output/eda_missing_values.png', caption="Distribusi Missing Value Mentah", use_container_width=True)
+        img_path = os.path.join(BASE, 'output/eda_missing_values.png')
+        if os.path.exists(img_path):
+            st.image(img_path, caption="Distribusi Missing Value Mentah", use_container_width=True)
         else:
             st.warning("Grafik missing value belum dibuat.")
 
@@ -497,15 +502,16 @@ elif page == "Hasil PRINCALS":
     
     st.markdown(f"""
     ### Aturan Seleksi Komponen PRINCALS:
-    Menggunakan kriteria **Cumulative Explained Variance ≥ 80% (0.80)**.
+    Menggunakan kriteria **Cumulative Explained Variance $\\ge$ 80% (0.80)**.
     Dari 122 variabel awal, terpilih sebanyak **{var_info['n_components']} komponen** utama yang menjelaskan 
     **{var_info['cumulative_variance']*100:.2f}%** dari total variansi informasi.
     """)
     
-    st.image('output/princals_scree.png', caption="PRINCALS Scree Plot & Cumulative Variance", use_container_width=True)
+    st.image(os.path.join(BASE, 'output/princals_scree.png'), caption="PRINCALS Scree Plot & Cumulative Variance", use_container_width=True)
     
-    if os.path.exists('output/princals_biplot.png'):
-        st.image('output/princals_biplot.png', caption="PRINCALS Biplot - PC1 vs PC2", use_container_width=True)
+    biplot_path = os.path.join(BASE, 'output/princals_biplot.png')
+    if os.path.exists(biplot_path):
+        st.image(biplot_path, caption="PRINCALS Biplot - PC1 vs PC2", use_container_width=True)
         
     st.markdown("### Lembar Hasil Analisis PRINCALS (Loaded from Cache)")
     
@@ -517,23 +523,22 @@ elif page == "Hasil PRINCALS":
         "Dataset Final (Terpilih)"
     ])
     
-    # Access the cached data frames
+    excel_principals_path = os.path.join(BASE, 'hasil_principals.xlsx')
     with tab_e1:
         c_v1, c_v2 = st.columns(2)
         with c_v1:
             st.markdown("**Eigenvalues per Komponen**")
-            df_ev = get_excel_sheet('hasil_principals.xlsx', sheet_name='Eigen Value')
+            df_ev = get_excel_sheet(excel_principals_path, sheet_name='Eigen Value')
             st.dataframe(df_ev.round(4), use_container_width=True)
         with c_v2:
             st.markdown("**Explained Variance Ratio**")
-            df_var = get_excel_sheet('hasil_principals.xlsx', sheet_name='Explained Variance')
+            df_var = get_excel_sheet(excel_principals_path, sheet_name='Explained Variance')
             st.dataframe(df_var.round(4), use_container_width=True)
             
     with tab_e2:
         st.markdown("**Component Loading Matrix (Korelasi Variabel vs Komponen)**")
-        df_loadings = get_excel_sheet('hasil_principals.xlsx', sheet_name='Component Loading', index_col=0)
+        df_loadings = get_excel_sheet(excel_principals_path, sheet_name='Component Loading', index_col=0)
         
-        # Interactive heatmap in Plotly
         fig_load = px.imshow(df_loadings.iloc[:35, :5], 
                              color_continuous_scale='RdBu',
                              labels=dict(color="Loading"), aspect="auto")
@@ -544,17 +549,17 @@ elif page == "Hasil PRINCALS":
         
     with tab_e3:
         st.markdown("**Object Scores (Koordinat Komponen Seluruh Mahasiswa)**")
-        df_obj = get_excel_sheet('hasil_principals.xlsx', sheet_name='Object Score')
+        df_obj = get_excel_sheet(excel_principals_path, sheet_name='Object Score')
         st.dataframe(df_obj.round(4), use_container_width=True)
         
     with tab_e4:
         st.markdown("**Component Score Coefficients (Eigenvectors / Pembobot Linier)**")
-        df_csc = get_excel_sheet('hasil_principals.xlsx', sheet_name='Component Score', index_col=0)
+        df_csc = get_excel_sheet(excel_principals_path, sheet_name='Component Score', index_col=0)
         st.dataframe(df_csc.round(4), use_container_width=True)
         
     with tab_e5:
         st.markdown(f"**Dataset Final untuk Clustering ({var_info['n_components']} Komponen Terpilih)**")
-        df_final = get_excel_sheet('hasil_principals.xlsx', sheet_name='Dataset Final')
+        df_final = get_excel_sheet(excel_principals_path, sheet_name='Dataset Final')
         st.dataframe(df_final.round(4), use_container_width=True)
 
     render_dosen_notes(page)
@@ -566,8 +571,7 @@ elif page == "Hasil Clustering":
     st.markdown('<p class="section-header">5. Eksperimen <span>Algoritma Clustering</span></p>', unsafe_allow_html=True)
     
     st.markdown("""
-    Seluruh algoritma di bawah ini dijalankan secara berurutan menggunakan **Dataset Final hasil PRINCALS** 
-    sebagai input eksklusif:
+    Seluruh algoritma di bawah ini dijalankan secara berurutan menggunakan **Dataset Final hasil PRINCALS** sebagai input eksklusif:
     * **K-Means & K-Medoids**: Centroid-based hard clustering.
     * **FCM (Fuzzy C-Means)**: Memberikan keanggotaan fuzzy kontinu (0 s.d. 1) untuk setiap cluster.
     * **PCM (Possibilistic C-Means)**: Mengatasi noise dengan mengukur typicality nilai kecocokan absolut.
@@ -581,7 +585,7 @@ elif page == "Hasil Clustering":
     
     st.markdown(f"### Lembar Kerja Sheet: `{sel_method}`")
     try:
-        df_sheet = get_excel_sheet('hasil_clustering.xlsx', sheet_name=sel_method)
+        df_sheet = get_excel_sheet(os.path.join(BASE, 'hasil_clustering.xlsx'), sheet_name=sel_method)
         st.dataframe(df_sheet, use_container_width=True)
     except Exception as e:
         st.error(f"Gagal membaca sheet clustering {sel_method} (Mungkin file terkunci atau belum dibuat): {e}")
@@ -599,7 +603,6 @@ elif page == "Perbandingan Metode":
     
     st.markdown("### Tabel Hasil Lengkap Seluruh Eksperimen (K=2..10 & DBSCAN Grid Search)")
     
-    # Filter options
     f_methods = st.multiselect("Filter Metode:", results['method'].unique(), default=results['method'].unique())
     df_filtered = results[results['method'].isin(f_methods)].sort_values('silhouette', ascending=False)
     
@@ -633,7 +636,6 @@ elif page == "Evaluasi Silhouette & BSS/TSS":
        DBSCAN secara otomatis memisahkan mahasiswa dengan data akademik yang tidak biasa (outliers) sebagai klaster noise (`-1`), sehingga profil klaster utama (`Sangat Tinggi` dan `Tinggi`) tidak terdistorsi oleh data ekstrem, menghasilkan analisis yang secara akademis valid dan obyektif.
     """)
     
-    # Plotly Bar Charts of Best models
     st.markdown("### Perbandingan Performa Terbaik per Metode")
     
     c1, c2 = st.columns(2)
@@ -657,7 +659,6 @@ elif page == "Evaluasi Silhouette & BSS/TSS":
         fig_bss.update_traces(texttemplate='%{text:.2f}%', textposition='outside')
         st.plotly_chart(fig_bss, use_container_width=True)
         
-    # Radar polar chart
     st.markdown("### Radar Chart Performa Rata-Rata Algoritma (Silhouette & BSS/TSS)")
     
     categories = ['Silhouette Score', 'BSS/TSS Ratio (Scaled 0-1)']
@@ -678,13 +679,12 @@ elif page == "Evaluasi Silhouette & BSS/TSS":
     )
     st.plotly_chart(fig_radar, use_container_width=True)
     
-    # Display static Matplotlib Heatmaps/Lines
     st.markdown("### Heatmap & Tren Line Plot (Matplotlib Visualizations)")
     col_mat1, col_mat2 = st.columns(2)
     with col_mat1:
-        st.image('output/eval_heatmap.png', caption="Evaluasi Heatmap per k", use_container_width=True)
+        st.image(os.path.join(BASE, 'output/eval_heatmap.png'), caption="Evaluasi Heatmap per k", use_container_width=True)
     with col_mat2:
-        st.image('output/eval_lines.png', caption="Evaluasi Line Plot per k", use_container_width=True)
+        st.image(os.path.join(BASE, 'output/eval_lines.png'), caption="Evaluasi Line Plot per k", use_container_width=True)
 
     render_dosen_notes(page)
 
@@ -705,11 +705,11 @@ elif page == "Visualisasi Cluster":
     df_scatter = pd.concat([df_labeled, X_pc[['PC1', 'PC2']]], axis=1)
     
     fig_scat = px.scatter(df_scatter, x='PC1', y='PC2', color='cluster_label',
-                         color_discrete_map=PALETTE,
-                         custom_data=['NRP', 'Nama Mahasiswa'],
-                         hover_data=['NRP', 'Nama Mahasiswa', 'Rata-Rata IPS'],
-                         labels={'PC1': 'PC1 (PRINCALS)', 'PC2': 'PC2 (PRINCALS)'},
-                         title=f"Visualisasi Proyeksi Ruang 2D (Model Terbaik: {best_model['method']})")
+                          color_discrete_map=PALETTE,
+                          custom_data=['NRP', 'Nama Mahasiswa'],
+                          hover_data=['NRP', 'Nama Mahasiswa', 'Rata-Rata IPS'],
+                          labels={'PC1': 'PC1 (PRINCALS)', 'PC2': 'PC2 (PRINCALS)'},
+                          title=f"Visualisasi Proyeksi Ruang 2D (Model Terbaik: {best_model['method']})")
     
     # Add centroids for centroid methods
     if best_model['method'] != 'DBSCAN':
@@ -735,9 +735,9 @@ elif page == "Visualisasi Cluster":
             
             color = PALETTE.get(student_clicked['cluster_label'], '#8E9BAE')
             
-            # Semester GPAs and attendance text lists (Dynamic)
-            ips_text = " &nbsp;·&nbsp; ".join([f"Sem {i+1}: <b>{student_clicked[col]:.2f}</b>" for i, col in enumerate(ips_individual)])
-            abs_text = " &nbsp;·&nbsp; ".join([f"Sem {i+1}: <b>{student_clicked[col]:.1f}%</b>" for i, col in enumerate(abs_individual)])
+            # Semester GPAs and attendance text lists (Dynamic safely handled)
+            ips_text = " &nbsp;·&nbsp; ".join([f"Sem {i+1}: <b>{student_clicked[col]:.2f}</b>" for i, col in enumerate(ips_individual) if col in student_clicked])
+            abs_text = " &nbsp;·&nbsp; ".join([f"Sem {i+1}: <b>{student_clicked[col]:.1f}%</b>" for i, col in enumerate(abs_individual) if col in student_clicked])
             
             st.markdown(f"""
             <div style='background:#F5F3FF; border:1px solid #7367F0; border-radius:10px; padding:20px; margin-bottom:20px;'>
@@ -797,12 +797,9 @@ elif page == "Visualisasi Cluster":
     # 3. Radar Chart of Cluster Profiles (Multivariate Profiling)
     st.markdown("### Radar Chart Karakteristik Cluster")
     
-    # Calculate averages on academic courses + gpa + attendance
     radar_cats = ['IPK Kumulatif', 'Absensi (skala 0-4)', 'Aljabar Linier', 'Statistika Dasar', 'Pemrograman 1']
-    
     fig_radar_prof = go.Figure()
     
-    # For each cluster, plot the profile
     for lbl in sorted(df_labeled['cluster_label'].unique()):
         sub = df_labeled[df_labeled['cluster_label'] == lbl]
         if len(sub) == 0:
@@ -811,7 +808,6 @@ elif page == "Visualisasi Cluster":
         gpa_val = sub['Rata-Rata IPS'].mean()
         absen_val = (sub['Rata-Rata Absen Mahasiswa'].mean() / 100.0) * 4.0
         
-        # Check course grade mappings
         alj_val = sub['Nilai Semester 1 - Aljabar Linier'].mean() if 'Nilai Semester 1 - Aljabar Linier' in sub.columns else 0
         stat_val = sub['Nilai Semester 1 - Statistika Dasar'].mean() if 'Nilai Semester 1 - Statistika Dasar' in sub.columns else 0
         pem_val = sub['Nilai Semester 1 - Pemrograman 1'].mean() if 'Nilai Semester 1 - Pemrograman 1' in sub.columns else 0
@@ -838,20 +834,23 @@ elif page == "Visualisasi Cluster":
         'Nilai Semester 1 - Statistika Dasar',
         'Nilai Semester 1 - Pemrograman 1',
         'Nilai Semester 2 - Pemrograman 2',
-        'Nilai Semester 4  - Data Mining'
+        'Nilai Semester 4 - Data Mining'
     ]
-    # Filter core courses list to ensure they exist
+    # Filter core courses list to ensure they exist safely
     core_courses_list = [c for c in core_courses_list if c in df_labeled.columns]
     
-    df_heat_data = df_labeled.groupby('cluster_label')[core_courses_list].mean()
-    # Clean course labels for presentation
-    df_heat_data.columns = [c.split(' - ')[-1] for c in df_heat_data.columns]
-    
-    fig_heat = px.imshow(df_heat_data,
-                         labels=dict(x="Mata Kuliah", y="Cluster", color="Rata-Rata Nilai"),
-                         color_continuous_scale='Purples',
-                         title="Heatmap Nilai Rata-Rata Mata Kuliah Inti per Cluster")
-    st.plotly_chart(fig_heat, use_container_width=True)
+    if core_courses_list:
+        df_heat_data = df_labeled.groupby('cluster_label')[core_courses_list].mean()
+        # Clean course labels for presentation
+        df_heat_data.columns = [c.split(' - ')[-1] for c in df_heat_data.columns]
+        
+        fig_heat = px.imshow(df_heat_data,
+                             labels=dict(x="Mata Kuliah", y="Cluster", color="Rata-Rata Nilai"),
+                             color_continuous_scale='Purples',
+                             title="Heatmap Nilai Rata-Rata Mata Kuliah Inti per Cluster")
+        st.plotly_chart(fig_heat, use_container_width=True)
+    else:
+        st.info("Tidak ada kolom mata kuliah inti yang cocok untuk menampilkan Heatmap.")
 
     render_dosen_notes(page)
 
@@ -859,272 +858,127 @@ elif page == "Visualisasi Cluster":
 # PAGE 9: DASHBOARD INSIGHT
 # ==============================================================================
 elif page == "Dashboard Insight":
-    st.markdown('<p class="section-header">9. Dashboard Insight <span>& Rekomendasi Akademik</span></p>', unsafe_allow_html=True)
+    st.markdown('<p class="section-header">9. Dashboard <span>Insight & Distribusi Klaster</span></p>', unsafe_allow_html=True)
     
-    st.markdown(f"""
-    ### Analisis Hasil Segmentasi Mahasiswa (Data Baru Semester 1 s.d. 5)
-    Berdasarkan pengelompokan model terbaik **{best_model['method']} ({best_model['params']})**, 
-    mahasiswa dikelompokkan ke dalam kategori-kategori berdasarkan karakteristik akademik komposit mereka:
-    """)
+    # Row 1: Metrics
+    st.markdown('### Ringkasan Statistik Klaster Utama')
     
-    c_p1, c_p2 = st.columns(2)
-    with c_p1:
-        st.markdown("**Profil Rata-Rata Cluster Utama**")
-        df_group = df_labeled.groupby('cluster_label')[['Rata-Rata IPS', 'Rata-Rata Absen Mahasiswa', 'NRP']].agg({
-            'Rata-Rata IPS': 'mean',
-            'Rata-Rata Absen Mahasiswa': 'mean',
-            'NRP': 'count'
-        }).rename(columns={'NRP': 'Jumlah Mahasiswa'})
-        st.dataframe(df_group.round(3))
-        
-    with c_p2:
-        st.markdown("**Karakteristik & Kebijakan Bimbingan:**")
-        st.markdown("""
-        * 🟢 **Sangat Tinggi**: Mahasiswa dengan IPK unggulan. Mempertahankan motivasi, direkomendasikan program akselerasi atau asisten praktikum.
-        * 🔵 **Tinggi**: Akademik baik dan stabil. Didorong mengikuti kompetisi akademik mahasiswa tingkat nasional.
-        * 🟣 **Sedang**: Performa cukup memadai namun memiliki fluktuasi di beberapa semester. Pendampingan berkala.
-        * 🟠 **Cukup**: Perlu didorong dalam bimbingan intensif dan pemantauan nilai mata kuliah dasar coding/statistika.
-        * 🔴 **Outlier / Kritis**: Membutuhkan program remedial, asistensi belajar privat, dan konseling bimbingan akademik intensif.
-        """)
-        
-    st.markdown('<p class="section-header">Pencarian <span>Profil Akademik Mahasiswa</span></p>', unsafe_allow_html=True)
+    col_m1, col_m2, col_m3, col_m4 = st.columns(4)
+    with col_m1:
+        st.markdown(f"""
+        <div class="metric-card">
+            <div class="accent" style="background:#28C76F;"></div>
+            <div class="mc-val">{len(df_labeled[df_labeled['cluster_label'] == 'Sangat Tinggi'])}</div>
+            <div class="mc-lbl">Klaster Sangat Tinggi</div>
+        </div>
+        """, unsafe_allow_html=True)
+    with col_m2:
+        st.markdown(f"""
+        <div class="metric-card">
+            <div class="accent" style="background:#00CFE8;"></div>
+            <div class="mc-val">{len(df_labeled[df_labeled['cluster_label'] == 'Tinggi'])}</div>
+            <div class="mc-lbl">Klaster Tinggi</div>
+        </div>
+        """, unsafe_allow_html=True)
+    with col_m3:
+        st.markdown(f"""
+        <div class="metric-card">
+            <div class="accent" style="background:#7367F0;"></div>
+            <div class="mc-val">{len(df_labeled[df_labeled['cluster_label'] == 'Sedang'])}</div>
+            <div class="mc-lbl">Klaster Sedang</div>
+        </div>
+        """, unsafe_allow_html=True)
+    with col_m4:
+        st.markdown(f"""
+        <div class="metric-card">
+            <div class="accent" style="background:#EA5455;"></div>
+            <div class="mc-val">{len(df_labeled[df_labeled['cluster_label'].str.contains('Rendah|Kritis', na=False, case=False)])}</div>
+            <div class="mc-lbl">Klaster Rendah / Kritis</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    # Charts Section
+    st.markdown('### Analisis Distribusi Demografi & Akademik per Klaster')
+    c_ins1, c_ins2 = st.columns(2)
     
-    search_q = st.text_input("Masukkan Nama atau NRP Mahasiswa:")
-    if search_q:
-        match = df_labeled[df_labeled['Nama Mahasiswa'].str.contains(search_q, case=False) | 
-                           df_labeled['NRP'].astype(str).str.contains(search_q)]
-    else:
-        match = df_labeled
+    with c_ins1:
+        # Pie Chart Cluster Distribution
+        df_pie = df_labeled['cluster_label'].value_counts().reset_index()
+        df_pie.columns = ['Klaster', 'Jumlah Mahasiswa']
+        fig_pie = px.pie(df_pie, values='Jumlah Mahasiswa', names='Klaster',
+                         color='Klaster', color_discrete_map=PALETTE,
+                         title='Persentase Pembagian Klaster Mahasiswa')
+        st.plotly_chart(fig_pie, use_container_width=True)
         
-    if match.empty:
-        st.warning("Data mahasiswa tidak ditemukan.")
-    else:
-        for idx, row in match.iterrows():
-            lbl = row['cluster_label']
-            color = PALETTE.get(lbl, '#8E9BAE')
-            
-            # Semester GPAs and attendance text lists (Dynamic)
-            ips_text = " &nbsp;·&nbsp; ".join([f"Sem {i+1}: <b>{row[col]:.2f}</b>" for i, col in enumerate(ips_individual)])
-            abs_text = " &nbsp;·&nbsp; ".join([f"Sem {i+1}: <b>{row[col]:.1f}%</b>" for i, col in enumerate(abs_individual)])
-            
-            with st.container():
-                st.markdown(f"""
-                <div class="stu-card">
-                    <div style='display:flex; justify-content:space-between; align-items:center;'>
-                        <span style='font-size:1.15rem; font-weight:bold; color:#7367F0;'>{row['Nama Mahasiswa']}</span>
-                        <span class="custom-badge" style="background-color:{color};">{lbl}</span>
-                    </div>
-                    <div style='font-size:0.8rem; color:#8E9BAE; margin-top:2px;'>NRP: {row['NRP']} &nbsp;·&nbsp; Prodi: {row['Prodi']} &nbsp;·&nbsp; Angkatan: {row['Angkatan Tahun']}</div>
-                    <hr style='border:none; border-top:1px solid #F0F0F0; margin:8px 0'>
-                    <div style='display:flex; gap:16px; margin-top:6px; font-size:0.85rem;'>
-                        <div style='flex:1;'>
-                            <b style='color:#566A7F; font-size:0.8rem;'>AKADEMIK:</b><br>
-                            IPK Rata-Rata (Sem 1-5): <span style='color:#7367F0; font-weight:bold;'>{row['Rata-Rata IPS']:.3f}</span><br>
-                            {ips_text}
-                        </div>
-                        <div style='flex:1;'>
-                            <b style='color:#566A7F; font-size:0.8rem;'>KEHADIRAN:</b><br>
-                            Rata-Rata Kehadiran (Sem 1-5): <span style='color:#28C76F; font-weight:bold;'>{row['Rata-Rata Absen Mahasiswa']:.1f}%</span><br>
-                            {abs_text}
-                        </div>
-                    </div>
-                    <div style='margin-top:10px; padding:8px 12px; background:#F8F8F8; border-radius:6px; font-size:0.8rem;'>
-                        <b>Saran Pembimbing Akademik (Dosen Wali):</b> {
-                            "Berikan tantangan proyek mandiri atau dorong ikut kompetisi/asisten dosen wali." if lbl == 'Sangat Tinggi' else
-                            "Pertahankan konsistensi performa dan latih keterampilan soft-skill/sertifikasi." if lbl == 'Tinggi' else
-                            "Berikan motivasi belajar berkala, monitor fluktuasi indeks prestasi semester." if lbl == 'Sedang' else
-                            "Jadwalkan asistensi belajar, prioritaskan pemahaman konsep pemrograman dasar." if lbl == 'Cukup' else
-                            "Jadwalkan remedial, lakukan konseling dosen wali intensif, dan batasi beban SKS semester berikutnya."
-                        }
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
+    with c_ins2:
+        # Bar Chart Rata-rata IPS per Klaster jika kolomnya tersedia
+        avg_ips_col = [c for c in df_labeled.columns if 'rata' in c.lower() and 'ips' in c.lower()]
+        if avg_ips_col:
+            df_bar_ips = df_labeled.groupby('cluster_label')[avg_ips_col[0]].mean().reset_index()
+            df_bar_ips.columns = ['Klaster', 'Rata-Rata IPS']
+            fig_bar_ips = px.bar(df_bar_ips, x='Klaster', y='Rata-Rata IPS',
+                                 color='Klaster', color_discrete_map=PALETTE,
+                                 title='Perbandingan Rata-Rata IPS antar Klaster')
+            st.plotly_chart(fig_bar_ips, use_container_width=True)
+        else:
+            st.info("Kolom akumulasi Rata-Rata IPS tidak ditemukan untuk visualisasi komparatif.")
 
     render_dosen_notes(page)
 
 # ==============================================================================
-# PAGE 10: MAHASISWA BERPRESTASI
+# PAGE 10: MAHASISWA BERPRESTASI (REKOMENDASI PERTUKARAN PELAJAR)
 # ==============================================================================
 elif page == "Mahasiswa Berprestasi":
-    st.markdown('<p class="section-header">10. Analisis <span>Mahasiswa Berprestasi & Rekomendasi</span></p>', unsafe_allow_html=True)
+    st.markdown('<p class="section-header">10. Rekomendasi <span>Pertukaran Pelajar & Mahasiswa Berprestasi</span></p>', unsafe_allow_html=True)
     
     st.markdown("""
-    Kandidat mahasiswa berprestasi dan rekomendasi pertukaran pelajar diidentifikasi dengan memadukan **IPS Kumulatif**, **Kehadiran**, 
-    dan performa **Total serta Rata-Rata Nilai Ujian Semester (skala 0-100)** untuk setiap mata kuliah.
+    Halaman ini menyajikan daftar mahasiswa dari klaster **Sangat Tinggi** dan **Tinggi** yang direkomendasikan 
+    untuk mengikuti program **Pertukaran Pelajar (Student Exchange)** berdasarkan performa akademik terbaik 
+    dan tingkat kehadiran yang maksimal.
     """)
     
-    # 1. Top 5 Rekomendasi Pertukaran Pelajar
-    st.markdown("### 🏆 Top 5 Rekomendasi Mahasiswa untuk Pertukaran Pelajar")
+    # Filter data untuk mahasiswa berprestasi
+    df_filtered_prestasi = df_labeled[df_labeled['cluster_label'].isin(['Sangat Tinggi', 'Tinggi'])]
     
-    # Calculate composite score for ranking: 50% IPS + 30% Average Semester Grade + 20% Attendance
-    df_rank = df_labeled.copy()
-    
-    avg_grades_all_sems = []
-    for idx, row in df_rank.iterrows():
-        mean_grade = np.mean([row[f'Rata-Rata Nilai Semester {s}'] for s in [1, 2, 3, 4, 5]])
-        avg_grades_all_sems.append(mean_grade)
-    df_rank['Rata-Rata Nilai Keseluruhan'] = avg_grades_all_sems
-    
-    # Normalize components for ranking
-    ips_min, ips_max = df_rank['Rata-Rata IPS'].min(), df_rank['Rata-Rata IPS'].max()
-    grade_min, grade_max = df_rank['Rata-Rata Nilai Keseluruhan'].min(), df_rank['Rata-Rata Nilai Keseluruhan'].max()
-    absen_min, absen_max = df_rank['Rata-Rata Absen Mahasiswa'].min(), df_rank['Rata-Rata Absen Mahasiswa'].max()
-    
-    norm_ips = (df_rank['Rata-Rata IPS'] - ips_min) / (ips_max - ips_min) if ips_max > ips_min else 1.0
-    norm_grade = (df_rank['Rata-Rata Nilai Keseluruhan'] - grade_min) / (grade_max - grade_min) if grade_max > grade_min else 1.0
-    norm_absen = (df_rank['Rata-Rata Absen Mahasiswa'] - absen_min) / (absen_max - absen_min) if absen_max > absen_min else 1.0
-    
-    df_rank['Score_Komposit'] = 0.5 * norm_ips + 0.3 * norm_grade + 0.2 * norm_absen
-    df_top5 = df_rank.sort_values('Score_Komposit', ascending=False).head(5)
-    
-    # Display Top 5 in cards
-    cols_top = st.columns(5)
-    badges = ["🥇 GOLD", "🥈 SILVER", "🥉 BRONZE", "🎖️ TOP 4", "🎖️ TOP 5"]
-    colors = ["#FFD700", "#C0C0C0", "#CD7F32", "#7367F0", "#7367F0"]
-    
-    for idx, (i, row) in enumerate(df_top5.iterrows()):
-        with cols_top[idx]:
-            st.markdown(f"""
-            <div style='background:#FFFFFF; border:2px solid {colors[idx]}; border-radius:12px; padding:16px; text-align:center; box-shadow: 0 4px 10px rgba(0,0,0,0.05);'>
-                <span style='font-size:0.85rem; font-weight:bold; color:{colors[idx]};'>{badges[idx]}</span>
-                <div style='font-size:1.05rem; font-weight:bold; color:#566A7F; margin-top:8px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;'>{row['Nama Mahasiswa']}</div>
-                <div style='font-size:0.75rem; color:#8E9BAE; margin-bottom:12px;'>NRP: {row['NRP']}</div>
-                <hr style='border:none; border-top:1px solid #F0F0F0; margin:8px 0'>
-                <div style='font-size:0.8rem; text-align:left; color:#566A7F; line-height:1.5;'>
-                    IPK Kum : <b>{row['Rata-Rata IPS']:.3f}</b><br>
-                    Nilai Rata: <b>{row['Rata-Rata Nilai Keseluruhan']:.2f}</b><br>
-                    Absensi : <b>{row['Rata-Rata Absen Mahasiswa']:.1f}%</b>
-                </div>
-                <div style='margin-top:10px; background:{colors[idx]}22; padding:4px; border-radius:6px; font-size:0.7rem; font-weight:bold; color:#566A7F;'>
-                    REKOMENDASI: YA
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
+    if not df_filtered_prestasi.empty:
+        # Tampilkan pencarian interaktif
+        search_query = st.text_input("🔍 Cari Mahasiswa Berprestasi (Nama / NRP):", "")
+        if search_query:
+            df_filtered_prestasi = df_filtered_prestasi[
+                df_filtered_prestasi['Nama Mahasiswa'].str.contains(search_query, case=False, na=False) |
+                df_filtered_prestasi['NRP'].astype(str).str.contains(search_query, na=False)
+            ]
             
-    st.markdown("---")
-    
-    # 2. Interactive Comparison Explorer
-    st.markdown("### 📊 Perbandingan Nilai Mata Kuliah vs Rata-Rata/Total Semester")
-    
-    # Select student
-    student_names = sorted(df_labeled['Nama Mahasiswa'].unique())
-    sel_stu_name = st.selectbox("Pilih Mahasiswa:", student_names)
-    sel_student = df_labeled[df_labeled['Nama Mahasiswa'] == sel_stu_name].iloc[0]
-    
-    # Select semester
-    sel_sem = st.selectbox("Pilih Semester untuk Detil Perbandingan Nilai:", [1, 2, 3, 4, 5])
-    
-    # Find course columns for that semester
-    sem_cols = [c for c in df_labeled.columns if f'Nilai Semester {sel_sem}' in c 
-                and not any(kw in c.lower() for kw in ['ips', 'absen', 'rata-rata', 'total'])]
-    
-    if not sem_cols:
-        st.warning(f"Tidak ada data nilai mata kuliah untuk Semester {sel_sem}.")
+        # Urutkan berdasarkan Rata-Rata IPS tertinggi jika tersedia
+        avg_ips_col = [c for c in df_labeled.columns if 'rata' in c.lower() and 'ips' in c.lower()]
+        if avg_ips_col:
+            df_filtered_prestasi = df_filtered_prestasi.sort_values(by=avg_ips_col[0], ascending=False)
+            
+        st.markdown(f"**Ditemukan {len(df_filtered_prestasi)} Mahasiswa Kandidat Unggulan:**")
+        
+        # Tampilkan dalam bentuk dataframe yang bersih
+        display_cols = ['NRP', 'Nama Mahasiswa', 'cluster_label'] + (avg_ips_col[:1] if avg_ips_col else [])
+        st.dataframe(df_filtered_prestasi[display_cols], use_container_width=True)
+        
+        # Custom Student Cards Layout
+        st.markdown("### 📇 Kartu Profil Mahasiswa Unggulan")
+        card_cols = st.columns(2)
+        for idx, row in df_filtered_prestasi.head(6).iterrows():
+            with card_cols[idx % 2]:
+                ips_val = f"{row[avg_ips_col[0]]:.2f}" if avg_ips_col else "N/A"
+                st.markdown(f"""
+                <div class="stu-card">
+                    <span class="custom-badge" style="background:{PALETTE.get(row['cluster_label'], '#7367F0')}; float:right;">
+                        {row['cluster_label']}
+                    </span>
+                    <h4 style="margin:0 0 4px 0; color:#5E50EE;">{row['Nama Mahasiswa']}</h4>
+                    <p style="margin:0; font-size:0.85rem; color:#8E9BAE;">NRP: {row['NRP']}</p>
+                    <hr style="border:none; border-top:1px solid #F0F0F0; margin:8px 0;">
+                    <p style="margin:0; font-size:0.9rem;">⭐ <b>Rata-Rata IPS:</b> {ips_val}</p>
+                    <p style="margin:4px 0 0 0; font-size:0.82rem; color:#28C76F;">✅ <i>Direkomendasikan untuk Program Pertukaran Pelajar</i></p>
+                </div>
+                """, unsafe_allow_html=True)
     else:
-        # Extract course names and values
-        courses_clean_names = [c.split(' - ')[-1] for c in sem_cols]
-        student_grades = [sel_student[c] for c in sem_cols]
-        class_averages = [df_labeled[c].mean() for c in sem_cols]
-        
-        student_total = sel_student[f'Total Nilai Semester {sel_sem}']
-        student_avg = sel_student[f'Rata-Rata Nilai Semester {sel_sem}']
-        
-        class_total_avg = df_labeled[f'Total Nilai Semester {sel_sem}'].mean()
-        class_grade_avg = df_labeled[f'Rata-Rata Nilai Semester {sel_sem}'].mean()
-        
-        # Display Stats summary row
-        col_s1, col_s2, col_s3, col_s4 = st.columns(4)
-        with col_s1:
-            st.metric("Total Nilai Mahasiswa", f"{student_total:.1f}", f"{student_total - class_total_avg:+.1f} vs Rata-Rata Kelas")
-        with col_s2:
-            st.metric("Rata-Rata Nilai Mahasiswa", f"{student_avg:.2f}", f"{student_avg - class_grade_avg:+.2f} vs Rata-Rata Kelas")
-        with col_s3:
-            absen_col = f'Nilai Semester {sel_sem} - ABSENSI'
-            if absen_col in sel_student:
-                student_abs = sel_student[absen_col]
-                class_abs = df_labeled[absen_col].mean()
-                st.metric("Kehadiran Semester", f"{student_abs:.1f}%", f"{student_abs - class_abs:+.1f}% vs Rata-Rata Kelas")
-            else:
-                st.metric("Kehadiran Semester", "N/A")
-        with col_s4:
-            ips_col = [c for c in ips_individual if f'Semester {sel_sem}' in c]
-            if ips_col:
-                student_ips = sel_student[ips_col[0]]
-                class_ips = df_labeled[ips_col[0]].mean()
-                st.metric("IPS Semester", f"{student_ips:.3f}", f"{student_ips - class_ips:+.3f} vs Rata-Rata Kelas")
-            else:
-                st.metric("IPS Semester", "N/A")
-                
-        # Grouped bar chart using Plotly
-        fig_comp = go.Figure()
-        
-        fig_comp.add_trace(go.Bar(
-            x=courses_clean_names,
-            y=student_grades,
-            name=f"Nilai {sel_stu_name}",
-            marker_color='#7367F0'
-        ))
-        
-        fig_comp.add_trace(go.Bar(
-            x=courses_clean_names,
-            y=class_averages,
-            name="Rata-Rata Kelas",
-            marker_color='#E8E4FF'
-        ))
-        
-        fig_comp.add_shape(type="line",
-            x0=-0.5, y0=student_avg, x1=len(courses_clean_names)-0.5, y1=student_avg,
-            line=dict(color="#FF9F43", width=2, dash="dash"),
-            name="Rata-Rata Nilai Mahasiswa"
-        )
-        fig_comp.add_trace(go.Scatter(
-            x=[None], y=[None], mode="lines",
-            line=dict(color="#FF9F43", width=2, dash="dash"),
-            name="Rata-Rata Nilai Mahasiswa"
-        ))
-        
-        fig_comp.add_shape(type="line",
-            x0=-0.5, y0=class_grade_avg, x1=len(courses_clean_names)-0.5, y1=class_grade_avg,
-            line=dict(color="#EA5455", width=2, dash="dot"),
-            name="Rata-Rata Nilai Kelas"
-        )
-        fig_comp.add_trace(go.Scatter(
-            x=[None], y=[None], mode="lines",
-            line=dict(color="#EA5455", width=2, dash="dot"),
-            name="Rata-Rata Nilai Kelas"
-        ))
-        
-        fig_comp.update_layout(
-            barmode='group',
-            title=f"Perbandingan Nilai Mata Kuliah Semester {sel_sem} - {sel_stu_name} vs Kelas",
-            xaxis_title="Mata Kuliah",
-            yaxis_title="Nilai Ujian (Skala 0-100)",
-            yaxis=dict(range=[0, 105]),
-            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
-        )
-        
-        st.plotly_chart(fig_comp, use_container_width=True)
-        
-        # Insight Text
-        best_course_idx = np.argmax(student_grades)
-        best_course_name = courses_clean_names[best_course_idx]
-        best_course_grade = student_grades[best_course_idx]
-        
-        st.markdown(f"""
-        ### 🔍 Analisis Akademik & Kekuatan Kompetensi:
-        * **Mata Kuliah Unggulan**: Pada Semester {sel_sem}, **{sel_stu_name}** paling unggul dalam mata kuliah **{best_course_name}** dengan nilai **{best_course_grade:.1f}**.
-        * **Status Dibanding Kelas**: Rata-rata nilai mahasiswa adalah **{student_avg:.2f}**, yang mana 
-          **{"LEBIH TINGGI" if student_avg >= class_grade_avg else "LEBIH RENDAH"}** sebesar **{abs(student_avg - class_grade_avg):.2f}** poin dibandingkan dengan rata-rata nilai kelas (**{class_grade_avg:.2f}**).
-        * **Rekomendasi Karir/Akademis**: Mahasiswa ini menunjukkan ketertarikan/bakat yang kuat di bidang *{best_course_name}*. Disarankan untuk dibina lebih lanjut pada topik riset atau praktikum yang selaras.
-        """)
+        st.warning("Tidak ditemukan data mahasiswa dengan kategori klaster 'Sangat Tinggi' atau 'Tinggi'.")
 
     render_dosen_notes(page)
-
-# ─────────────────────────────────────────────
-# FOOTER
-# ─────────────────────────────────────────────
-st.markdown("""
-<div class="footer">
-    Restrukturisasi Data Mining Pipeline Selesai &nbsp;·&nbsp; <span>PRINCALS & Fuzzy Clustering Dashboard</span> &nbsp;·&nbsp; 2026
-</div>
-""", unsafe_allow_html=True)

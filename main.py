@@ -12,7 +12,7 @@ if sys.platform.startswith('win'):
     sys.stdout.reconfigure(encoding='utf-8')
     sys.stderr.reconfigure(encoding='utf-8')
 
-DATA_PATH = r"C:\Users\NITRO\Downloads\data_paa\test_akhir\cek2\data_base2.xlsx"
+DATA_PATH = r"C:\Users\NITRO\Downloads\data_paa\test_akhir\APLIKASI_DASHBOARD_TA_FIX\data_base2.xlsx"
 
 def banner(step, title):
     print("\n" + "="*65)
@@ -34,9 +34,15 @@ def main():
     run_eda()
 
     # ── Step 3: PRINCALS ──
-    banner(3, "TRANSFORMASI DATA - PRINCALS")
+    banner(3, "TRANSFORMASI DATA - PRINCALS (122 var -> 2D Object Scores)")
     from step3_princals import run_princals
-    X_princals, pca_model, var_info = run_princals(X_scaled, feature_cols)
+    # Gunakan X_binned (ordinal 1-4) sesuai panduan prompt
+    if os.path.exists('output/X_binned.pkl'):
+        import pandas as pd
+        X_input = pd.read_pickle('output/X_binned.pkl')
+    else:
+        X_input = X_scaled
+    X_princals, pca_model, var_info = run_princals(X_input, feature_cols, n_components_fixed=2)
 
     # ── Step 4: Clustering ──
     banner(4, "CLUSTERING (FCM, PCM, FPCM, MFPCM, DBSCAN, K-Medoids, K-Means)")

@@ -17,67 +17,117 @@ def compute_composite_score(df, cluster_id):
     """
     Skor akademik multi-kriteria per cluster:
       50% → Rata-Rata IPS (kumulatif)
-      30% → Rata-rata IPS semester terkini (nilai ips, IPS, IPS.1, IPS.2)
+      30% → IPS Semester 5 (tren terkini)
       20% → Absensi rata-rata (dinormalisasi ke skala 0-4)
     """
     sub = df[df['cluster'] == cluster_id]
     if len(sub) == 0:
         return 0.0
         
-    ips_recent_cols = [c for c in df.columns if ('nilai IPS' in c or 'nilai ips' in c.lower()) and 'Rata-Rata' not in c]
-    absen_cols = [c for c in df.columns if 'ABSEN' in c.upper() and 'Rata-Rata' not in c]
+    # 1. Rata-Rata IPS Kumulatif
+    ips_cum = sub['Rata-Rata IPS'].mean() if 'Rata-Rata IPS' in df.columns else 0.0
+    
+    # 2. IPS Semester 5
+    sem5_cols = [c for c in df.columns if 'Semester 5' in c and ('nilai IPS' in c or 'nilai ips' in c.lower())]
+    if sem5_cols:
+        ips_sem5 = sub[sem5_cols[0]].mean()
+    else:
+        ips_individual = sorted([c for c in df.columns if ('nilai IPS' in c or 'nilai ips' in c.lower()) and 'Rata-Rata' not in c])
+        ips_sem5 = sub[ips_individual[-1]].mean() if ips_individual else ips_cum
+        
+    # 3. Persentase Kehadiran
+    absen_val = sub['Rata-Rata Absen Mahasiswa'].mean() if 'Rata-Rata Absen Mahasiswa' in df.columns else 100.0
+    absen_norm = (absen_val / 100.0) * 4.0   # normalisasi ke skala IPS (0-4)
 
-    ips_cum   = sub['Rata-Rata IPS'].mean() if 'Rata-Rata IPS' in df.columns else sub[ips_recent_cols].mean().mean()
-    ips_rec   = sub[ips_recent_cols].mean().mean() if ips_recent_cols else ips_cum
-    absen_raw = sub[absen_cols].mean().mean() if absen_cols else 100.0
-    absen_norm = (absen_raw / 100.0) * 4.0   # normalisasi ke skala IPS (0-4)
-
-    return 0.50 * ips_cum + 0.30 * ips_rec + 0.20 * absen_norm
+    return 0.50 * ips_cum + 0.30 * ips_sem5 + 0.20 * absen_norm
 
 def assign_labels(df, labels, feature_cols):
     df = df.copy()
     df['cluster'] = labels
 
-    # Identify non-noise clusters
-    cluster_ids = sorted([c for c in df['cluster'].unique() if c != -1])
+    # Identify all unique clusters including noise/outliers (-1)
+    cluster_ids = sorted(list(df['cluster'].unique()))
     
-    # Compute composite scores for non-noise clusters
+    # Compute composite scores for all clusters
     scores = {c: compute_composite_score(df, c) for c in cluster_ids}
     sorted_clusters = sorted(cluster_ids, key=lambda c: scores[c], reverse=True)
 
-    label_map_academic = {
-        1: 'Sangat Tinggi',
-        2: 'Tinggi',
-        3: 'Sedang',
-        4: 'Cukup',
-        5: 'Rendah',
-        6: 'Sangat Rendah',
-        7: 'Kritis',
-    }
-
     rank_labels = {}
-    for rank, cluster_id in enumerate(sorted_clusters, start=1):
-        rank_labels[cluster_id] = label_map_academic.get(rank, f'Cluster-{rank}')
-        
-    # Map noise points in DBSCAN
-    if -1 in df['cluster'].unique():
-        rank_labels[-1] = 'Outlier (Kritis)'
+    n_clusters = len(sorted_clusters)
+    
+    if n_clusters == 4:
+        rank_labels[sorted_clusters[0]] = 'Sangat Tinggi'
+        rank_labels[sorted_clusters[1]] = 'Tinggi'
+        rank_labels[sorted_clusters[2]] = 'Menengah'
+        rank_labels[sorted_clusters[3]] = 'Rendah/Outlier'
+    elif n_clusters == 1:
+        rank_labels[sorted_clusters[0]] = 'Tinggi'
+    elif n_clusters == 2:
+        rank_labels[sorted_clusters[0]] = 'Tinggi'
+        rank_labels[sorted_clusters[1]] = 'Rendah'
+    else:
+        # Highest score -> Tinggi
+        rank_labels[sorted_clusters[0]] = 'Tinggi'
+        # Lowest score -> Rendah
+        rank_labels[sorted_clusters[-1]] = 'Rendah'
+        # Middle score(s) -> Sedang
+        for c in sorted_clusters[1:-1]:
+            rank_labels[c] = 'Sedang'
 
     df['cluster_label'] = df['cluster'].map(rank_labels)
 
+    # Validation check: Sangat Tinggi > Tinggi > Sedang > Menengah > Rendah/Outlier > Rendah
+    label_scores = {}
+    all_possible_labels = ['Sangat Tinggi', 'Tinggi', 'Sedang', 'Menengah', 'Rendah/Outlier', 'Rendah']
+    for lbl in all_possible_labels:
+        sub = df[df['cluster_label'] == lbl]
+        if len(sub) > 0:
+            ips_cum = sub['Rata-Rata IPS'].mean() if 'Rata-Rata IPS' in df.columns else 0.0
+            
+            sem5_cols = [c for c in df.columns if 'Semester 5' in c and ('nilai IPS' in c or 'nilai ips' in c.lower())]
+            if sem5_cols:
+                ips_sem5 = sub[sem5_cols[0]].mean()
+            else:
+                ips_individual = sorted([c for c in df.columns if ('nilai IPS' in c or 'nilai ips' in c.lower()) and 'Rata-Rata' not in c])
+                ips_sem5 = sub[ips_individual[-1]].mean() if ips_individual else ips_cum
+                
+            absen_val = sub['Rata-Rata Absen Mahasiswa'].mean() if 'Rata-Rata Absen Mahasiswa' in df.columns else 100.0
+            absen_norm = (absen_val / 100.0) * 4.0
+            
+            label_scores[lbl] = 0.50 * ips_cum + 0.30 * ips_sem5 + 0.20 * absen_norm
+        else:
+            label_scores[lbl] = None
+
+    print("\n[Validation] Average Composite Scores by Label:")
+    for lbl in all_possible_labels:
+        if label_scores[lbl] is not None:
+            print(f"  {lbl}: {label_scores[lbl]:.4f}")
+
+    # Check monotonicity
+    valid = True
+    present_labels = [l for l in all_possible_labels if label_scores[l] is not None]
+    for i in range(len(present_labels) - 1):
+        for j in range(i + 1, len(present_labels)):
+            l1, l2 = present_labels[i], present_labels[j]
+            if label_scores[l1] <= label_scores[l2]:
+                valid = False
+
+    if not valid:
+        print("\n[WARNING] INKONSISTENSI DETEKSI: Urutan skor komposit tidak konsisten sesuai hirarki akademis!")
+    else:
+        print("\n[OK] VALIDASI BERHASIL: Skor komposit konsisten sesuai urutan hirarki akademis.")
+        # Assert to guarantee correctness
+        for i in range(len(present_labels) - 1):
+            for j in range(i + 1, len(present_labels)):
+                l1, l2 = present_labels[i], present_labels[j]
+                assert label_scores[l1] > label_scores[l2], f"{l1} must be greater than {l2}"
+
     # Print scoring details
-    ips_recent_cols = [c for c in df.columns if ('nilai IPS' in c or 'nilai ips' in c.lower()) and 'Rata-Rata' not in c]
-    print("\n[Label] Composite Score (50% IPS kum + 30% IPS terkini + 20% Absensi):")
-    print(f"  {'Cluster':>8}  {'Composite':>10}  {'IPS_kum':>8}  {'IPS_rec':>8}  {'Label'}")
-    print("  " + "-"*60)
+    print("\n[Label] Composite Score (50% IPS kum + 30% IPS Sem 5 + 20% Absensi):")
+    print(f"  {'Cluster':>8}  {'Composite':>10}  {'Label'}")
+    print("  " + "-"*40)
     for c in sorted_clusters:
-        sub = df[df['cluster'] == c]
-        ips_cum = sub['Rata-Rata IPS'].mean() if 'Rata-Rata IPS' in df.columns else 0
-        ips_rec = sub[ips_recent_cols].mean().mean() if ips_recent_cols else 0
-        print(f"  {c:>8}  {scores[c]:>10.4f}  {ips_cum:>8.3f}  {ips_rec:>8.3f}  -> {rank_labels[c]}")
-        
-    if -1 in rank_labels:
-        print(f"  {-1:>8}  {'N/A':>10}  {'N/A':>8}  {'N/A':>8}  -> {rank_labels[-1]} (DBSCAN Noise)")
+        print(f"  {c:>8}  {scores[c]:>10.4f}  -> {rank_labels[c]}")
 
     return df, rank_labels
 
@@ -95,7 +145,8 @@ def profile_clusters(df, feature_cols):
     if absen_cols: rep_cols.append(absen_cols[0])
     
     profile = grouped[feature_cols].mean()
-    profile['jumlah_mahasiswa'] = grouped['NRP'].count()
+    count_col = 'NRP' if 'NRP' in df.columns else df.columns[0]
+    profile['jumlah_mahasiswa'] = grouped[count_col].count()
     
     print("\n[Label] Distribusi Cluster:")
     print(df['cluster_label'].value_counts().to_string())
